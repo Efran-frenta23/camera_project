@@ -14,20 +14,29 @@
     <!-- Tombol untuk menghentikan kamera -->
     <button id="stopCameraBtn">Stop Camera</button>
 
+    <!-- Stream kamera -->
+    <img id="cameraStream" src="/video_stream/" width="640" height="480" alt="Stream CCTV" style="display:none;">
+
     <script>
         // Mengaktifkan kamera
         document.getElementById('startCameraBtn').addEventListener('click', () => {
-            fetch('/start_camera/')  // Pastikan URL sesuai dengan urls.py
-                .then(response => response.json())
-                .then(data => console.log(data.message))
+            fetch('/start_camera/')
+                .then(response => response.text())  // Jika respons bukan JSON
+                .then(data => {
+                    console.log(data);
+                    document.getElementById('cameraStream').style.display = 'block';  // Tampilkan stream kamera
+                })
                 .catch(error => console.error('Error:', error));
         });
 
         // Menghentikan kamera
         document.getElementById('stopCameraBtn').addEventListener('click', () => {
-            fetch('/stop_camera/')  // Pastikan URL sesuai dengan urls.py
-                .then(response => response.json())
-                .then(data => console.log(data.message))
+            fetch('/stop_camera/')
+                .then(response => response.text())  // Jika respons bukan JSON
+                .then(data => {
+                    console.log(data);
+                    document.getElementById('cameraStream').style.display = 'none';  // Sembunyikan stream kamera
+                })
                 .catch(error => console.error('Error:', error));
         });
     </script>
