@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Webcam</title>
+</head>
+<body>
+    <h1>Control Webcam</h1>
+    
+    <!-- Tombol untuk mengaktifkan kamera -->
+    <button id="startCameraBtn">Start Camera</button>
+
+    <!-- Tombol untuk menghentikan kamera -->
+    <button id="stopCameraBtn">Stop Camera</button>
+
+    <script>
+        // Mengaktifkan kamera
+        document.getElementById('startCameraBtn').addEventListener('click', () => {
+            fetch('/start_camera/')  // Pastikan URL sesuai dengan urls.py
+                .then(response => response.json())
+                .then(data => console.log(data.message))
+                .catch(error => console.error('Error:', error));
+        });
+
+        // Menghentikan kamera
+        document.getElementById('stopCameraBtn').addEventListener('click', () => {
+            fetch('/stop_camera/')  // Pastikan URL sesuai dengan urls.py
+                .then(response => response.json())
+                .then(data => console.log(data.message))
+                .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
+</html>
