@@ -8,6 +8,14 @@
 <body>
     <h1>Control Webcam</h1>
     
+    <!-- Pilih kamera (internal, eksternal, atau keduanya) -->
+    <label for="cameraType">Pilih kamera:</label>
+    <select id="cameraType">
+        <option value="internal">Internal</option>
+        <option value="external">External</option>
+        <option value="both">Both</option>
+    </select>
+
     <!-- Tombol untuk mengaktifkan kamera -->
     <button id="startCameraBtn">Start Camera</button>
 
@@ -20,11 +28,12 @@
     <script>
         // Mengaktifkan kamera
         document.getElementById('startCameraBtn').addEventListener('click', () => {
-            fetch('/start_camera/')
-                .then(response => response.text())  // Jika respons bukan JSON
+            const cameraType = document.getElementById('cameraType').value;  // Ambil tipe kamera yang dipilih
+            fetch(`/start_camera/?camera_type=${cameraType}`)
+                .then(response => response.text())
                 .then(data => {
                     console.log(data);
-                    document.getElementById('cameraStream').style.display = 'block';  // Tampilkan stream kamera
+                    document.getElementById('cameraStream').style.display = 'block';
                 })
                 .catch(error => console.error('Error:', error));
         });
@@ -32,10 +41,10 @@
         // Menghentikan kamera
         document.getElementById('stopCameraBtn').addEventListener('click', () => {
             fetch('/stop_camera/')
-                .then(response => response.text())  // Jika respons bukan JSON
+                .then(response => response.text())
                 .then(data => {
                     console.log(data);
-                    document.getElementById('cameraStream').style.display = 'none';  // Sembunyikan stream kamera
+                    document.getElementById('cameraStream').style.display = 'none';
                 })
                 .catch(error => console.error('Error:', error));
         });

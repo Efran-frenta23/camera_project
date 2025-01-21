@@ -117,8 +117,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+MEDIA_URL = 'media/'
 # Folder penyimpanan video
 VIDEOS_DIR = os.path.join(BASE_DIR, 'videos')
+MEDIA_ROOT= BASE_DIR / 'videos'
+print(MEDIA_ROOT)
 
 
 # Buat folder jika tidak ada
