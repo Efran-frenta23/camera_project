@@ -7,15 +7,15 @@
 </head>
 <body>
     <h1>Control Webcam</h1>
-    
-    <!-- Pilih kamera (internal, eksternal, atau keduanya) -->
-    <label for="cameraType">Pilih kamera:</label>
-    <select id="cameraType">
-        <option value="internal">Internal</option>
-        <option value="external">External</option>
-        <option value="both">Both</option>
-    </select>
 
+    <!-- Dropdown untuk memilih kamera -->
+    <label for="cameraType">Choose Camera:</label>
+    <select id="cameraType">
+        <option value="internal">Internal Camera</option>
+        <option value="usb">USB Camera</option>
+        <option value="both">Both Cameras</option>
+    </select>
+    
     <!-- Tombol untuk mengaktifkan kamera -->
     <button id="startCameraBtn">Start Camera</button>
 
@@ -26,14 +26,16 @@
     <img id="cameraStream" src="/video_stream/" width="640" height="480" alt="Stream CCTV" style="display:none;">
 
     <script>
-        // Mengaktifkan kamera
+        // Mengaktifkan kamera dengan opsi kamera yang dipilih
         document.getElementById('startCameraBtn').addEventListener('click', () => {
-            const cameraType = document.getElementById('cameraType').value;  // Ambil tipe kamera yang dipilih
+            const cameraType = document.getElementById('cameraType').value;  // Mendapatkan nilai kamera yang dipilih
+
+            // Mengirim request ke server dengan tipe kamera yang dipilih
             fetch(`/start_camera/?camera_type=${cameraType}`)
-                .then(response => response.text())
+                .then(response => response.text())  // Jika respons bukan JSON
                 .then(data => {
                     console.log(data);
-                    document.getElementById('cameraStream').style.display = 'block';
+                    document.getElementById('cameraStream').style.display = 'block';  // Tampilkan stream kamera
                 })
                 .catch(error => console.error('Error:', error));
         });
@@ -41,10 +43,10 @@
         // Menghentikan kamera
         document.getElementById('stopCameraBtn').addEventListener('click', () => {
             fetch('/stop_camera/')
-                .then(response => response.text())
+                .then(response => response.text())  // Jika respons bukan JSON
                 .then(data => {
                     console.log(data);
-                    document.getElementById('cameraStream').style.display = 'none';
+                    document.getElementById('cameraStream').style.display = 'none';  // Sembunyikan stream kamera
                 })
                 .catch(error => console.error('Error:', error));
         });
