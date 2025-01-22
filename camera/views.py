@@ -31,13 +31,13 @@ def start_camera(request):
             return HttpResponse("Failed to open internal camera")
 
     elif camera_type == 'usb':
-        external_camera = cv2.VideoCapture(2)  # Kamera USB biasanya di index 2
+        external_camera = cv2.VideoCapture(10)  # Kamera USB biasanya di index 2
         if not external_camera.isOpened():
             return HttpResponse("Failed to open USB camera")
 
     elif camera_type == 'both':
         internal_camera = cv2.VideoCapture(0)  # Kamera internal
-        external_camera = cv2.VideoCapture(2)  # Kamera USB
+        external_camera = cv2.VideoCapture(10)  # Kamera USB
         if not internal_camera.isOpened() or not external_camera.isOpened():
             return HttpResponse("Failed to open both cameras")
 
