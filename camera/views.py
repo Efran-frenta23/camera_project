@@ -9,7 +9,21 @@ import subprocess
 # Variabel global untuk kamera
 internal_camera = None
 external_camera = None
-camera = cv2.VideoCapture()  # Kamera default atau eksternal
+camera = cv2.VideoCapture()  # Inisialisasi kamera default atau eksternal
+
+def find_external_camera():
+    """
+    Mencoba mendeteksi kamera eksternal dengan mengiterasi indeks kamera (1 s/d 10).
+    Mengembalikan objek cv2.VideoCapture jika ditemukan, jika tidak, None.
+    """
+    for idx in range(1, 11):  # Ubah rentang sesuai kebutuhan
+        cap = cv2.VideoCapture(idx)
+        if cap.isOpened():
+            # Opsional: bisa menambahkan pengecekan properti khusus jika diperlukan
+            return cap
+        else:
+            cap.release()
+    return None
 
 def index(request):
     return render(request, 'camera/index.html')
@@ -23,6 +37,8 @@ def start_camera(request):
         internal_camera.release()
     if external_camera and external_camera.isOpened():
         external_camera.release()
+    if camera and camera.isOpened():
+        camera.release()
 
     # Logika untuk memilih kamera
     if camera_type == 'internal':
@@ -31,17 +47,13 @@ def start_camera(request):
             return HttpResponse("Failed to open internal camera")
 
     elif camera_type == 'usb':
-        external_camera = cv2.VideoCapture(10)  # Kamera USB biasanya di index 2
-        if not external_camera.isOpened():
-            return HttpResponse("Failed to open USB camera")
-
-    elif camera_type == 'both':
-        internal_camera = cv2.VideoCapture(0)  # Kamera internal
-        external_camera = cv2.VideoCapture(10)  # Kamera USB
-        if not internal_camera.isOpened() or not external_camera.isOpened():
-            return HttpResponse("Failed to open both cameras")
+        # Cari kamera eksternal secara otomatis (tanpa harus menentukan indeks secara manual)
+        external_camera = find_external_camera()
+        if not external_camera or not external_camera.isOpened():
+            return HttpResponse("Failed to open external (USB) camera")
 
     elif camera_type == 'default':
+        camera.open(0)
         if not camera.isOpened():
             return HttpResponse("Failed to open default camera")
 
@@ -64,84 +76,100 @@ def video_stream():
     global internal_camera, external_camera, camera
     frame_width, frame_height, frame_rate = None, None, 20  # Default frame rate jika tidak terdeteksi
 
-    # Setup VideoWriter untuk menyimpan video
+    # Pastikan direktori untuk video ada
+    os.makedirs(settings.VIDEOS_DIR, exist_ok=True)
+
     video_writer = None
     video_count = 1
     start_time = time.time()
+    video_filename = None
 
     while True:
         frame = None
-        if internal_camera and internal_camera.isOpened():
-            ret, frame_internal = internal_camera.read()  # Baca frame dari kamera internal
-            if ret:
-                frame = frame_internal  # Gunakan frame dari internal
-
-        if external_camera and external_camera.isOpened():
-            ret, frame_external = external_camera.read()  # Baca frame dari kamera eksternal
-            if ret:
-                frame = frame_external  # Gunakan frame dari eksternal
-
-        if camera and camera.isOpened():
-            ret, frame_default = camera.read()  # Baca frame dari kamera default
-            if ret:
-                frame = frame_default  # Gunakan frame dari default
+        # Prioritaskan pembacaan frame dari kamera yang aktif
+        for cam in [internal_camera, external_camera, camera]:
+            if cam and cam.isOpened():
+                ret, temp_frame = cam.read()
+                if ret:
+                    frame = temp_frame
+                    break
 
         if frame is not None:
-            if not frame_width or not frame_height:
-                frame_width = int(camera.get(cv2.CAP_PROP_FRAME_WIDTH))
-                frame_height = int(camera.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                frame_rate = int(camera.get(cv2.CAP_PROP_FPS)) or 20
+            # Inisialisasi properti video (hanya sekali)
+            if frame_width is None or frame_height is None:
+                
+                frame_height, frame_width = frame.shape[:2]
+                frame_rate = int(cam.get(cv2.CAP_PROP_FPS)) or 30
 
-            # Simpan frame ke video setiap 30 detik
             current_time = time.time()
-            if (current_time - start_time) >= 30:
+            # Setiap 15 detik, simpan video yang sedang berjalan dan mulai yang baru
+            if (current_time - start_time) >= 15:
                 if video_writer:
                     video_writer.release()
 
-                    # Konversi video ke H.264 menggunakan FFmpeg
-                    input_filename = video_filename
-                    output_filename = os.path.join(settings.VIDEOS_DIR, f'video_{video_count}_h264.mp4')
+                    # Pastikan file input ada sebelum menjalankan FFmpeg
+                    if video_filename and os.path.exists(video_filename):
+                        output_filename = os.path.join(settings.VIDEOS_DIR, f'video_{video_count}_h264.mp4')
+                        ffmpeg_command = [
+                            'ffmpeg', '-y', '-i', video_filename,
+                            '-c:v', 'libx264', '-preset', 'slow',
+                            '-crf', '22', '-c:a', 'aac', '-b:a', '128k',
+                            output_filename
+                        ]
+                        try:
+                            subprocess.run(ffmpeg_command, check=True)
+                        except subprocess.CalledProcessError as e:
+                            print(f"Error during FFmpeg conversion: {e}")
+                        # Hapus file input setelah konversi berhasil
+                        if os.path.exists(video_filename):
+                            os.remove(video_filename)
+                    else:
+                        print(f"File {video_filename} tidak ditemukan, tidak dapat dikonversi.")
 
-                    ffmpeg_command = [
-                        'ffmpeg', '-i', input_filename,
-                        '-c:v', 'libx264', '-preset', 'slow',
-                        '-crf', '22', '-c:a', 'aac', '-b:a', '128k',
-                        output_filename
-                    ]
-
-                    subprocess.run(ffmpeg_command)
-
-                    if os.path.exists(input_filename):
-                        os.remove(input_filename)
-
+                # Buat file video baru
                 video_filename = os.path.join(settings.VIDEOS_DIR, f'video_{video_count}.mp4')
-                video_writer = cv2.VideoWriter(video_filename, cv2.VideoWriter_fourcc(*'mp4v'), frame_rate, (frame_width, frame_height))
+                video_writer = cv2.VideoWriter(
+                    video_filename,
+                    cv2.VideoWriter_fourcc(*'mp4v'),
+                    frame_rate,
+                    (frame_width, frame_height)
+                )
                 video_count += 1
                 start_time = current_time
 
+            # Tulis frame ke video jika video_writer aktif
             if video_writer:
                 video_writer.write(frame)
 
-            _, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            # Streaming frame sebagai JPEG
+            ret_enc, buffer = cv2.imencode('.jpg', frame)
+            if ret_enc:
+                frame_bytes = buffer.tobytes()
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            else:
+                yield (b'--frame\r\n'
+                       b'Content-Type: text/plain\r\n\r\nFailed to encode frame\r\n')
         else:
+            # Jika tidak ada frame, kirimkan pesan error melalui stream
             yield (b'--frame\r\n'
                    b'Content-Type: text/plain\r\n\r\nNo frames available\r\n')
 
-        if video_writer:
-            video_writer.release()
+    # Pastikan video_writer dilepas saat keluar dari loop
+    if video_writer:
+        video_writer.release()
 
 def video_stream_view(request):
-    return StreamingHttpResponse(video_stream(), content_type='multipart/x-mixed-replace; boundary=frame')
+    return StreamingHttpResponse(video_stream(),
+                                 content_type='multipart/x-mixed-replace; boundary=frame')
 
 def livestream(request):
     return render(request, 'camera/livestream.html')
 
 def video_history(request):
     video_files = os.listdir(settings.VIDEOS_DIR)
-    video_files = [str(os.path.join('videos', video)).replace("videos", "/media") for video in video_files]
+    # Ubah path file video untuk diakses via URL (misal: /media/)
+    video_files = [os.path.join(settings.MEDIA_URL, 'videos', video) for video in video_files]
     context = {'video_files': video_files}
     print(context)
     return render(request, 'camera/history.html', context)
