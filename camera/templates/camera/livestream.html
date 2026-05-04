@@ -1,14 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Stream CCTV</title>
-</head>
-<body>
-    <h1>Live Stream CCTV</h1>
-    <img src="/video_stream/" width="640" height="480" alt="Live Stream">
-    <br>
-    <a href="/history/">Lihat Rekaman</a>
-</body>
-</html>
+{% extends "camera/base.html" %}
+{% block title %}Live Stream — Camera Project{% endblock %}
+
+{% block main %}
+<div class="card">
+    <div class="stack">
+        <div>
+            <h1>Live Stream</h1>
+            <p class="muted">Tampilan langsung dari kamera yang sedang aktif. Mulai kamera dari halaman <a href="{% url 'index' %}">Kontrol</a> jika belum aktif.</p>
+        </div>
+        <div class="stream-frame">
+            <img src="/video_stream/" alt="Live stream">
+        </div>
+    </div>
+</div>
+{% endblock %}

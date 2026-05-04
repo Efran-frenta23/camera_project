@@ -117,16 +117,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
-MEDIA_URL = 'media/'
-# Folder penyimpanan video
-VIDEOS_DIR = os.path.join(BASE_DIR, 'videos')
-MEDIA_ROOT= BASE_DIR / 'videos'
-print(MEDIA_ROOT)
+MEDIA_URL = '/media/'
+VIDEOS_DIR = BASE_DIR / 'videos'
+MEDIA_ROOT = VIDEOS_DIR
 
-
-# Buat folder jika tidak ada
-if not os.path.exists(VIDEOS_DIR):
-    os.makedirs(VIDEOS_DIR)
+VIDEOS_DIR.mkdir(exist_ok=True)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

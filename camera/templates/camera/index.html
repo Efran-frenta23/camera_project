@@ -1,54 +1,95 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control Webcam</title>
-</head>
-<body>
-    <h1>Control Webcam</h1>
+{% extends "camera/base.html" %}
+{% block title %}Kontrol Kamera — Camera Project{% endblock %}
 
-    <!-- Dropdown untuk memilih kamera -->
-    <label for="cameraType">Choose Camera:</label>
-    <select id="cameraType">
-        <option value="internal">Internal Camera</option>
-        <option value="usb">USB Camera</option>
-    </select>
-    
-    <!-- Tombol untuk mengaktifkan kamera -->
-    <button id="startCameraBtn">Start Camera</button>
+{% block main %}
+<div class="card">
+    <div class="stack">
+        <div>
+            <h1>Kontrol Kamera</h1>
+            <p class="muted">Pilih sumber kamera, lalu mulai streaming. Tutup tab atau klik Stop untuk melepas perangkat.</p>
+        </div>
 
-    <!-- Tombol untuk menghentikan kamera -->
-    <button id="stopCameraBtn">Stop Camera</button>
+        <div class="row">
+            <div class="field" style="flex: 1; min-width: 200px;">
+                <label for="cameraType">Sumber Kamera</label>
+                <select id="cameraType" class="select">
+                    <option value="internal">Kamera Internal</option>
+                    <option value="usb">Kamera USB</option>
+                </select>
+            </div>
+            <button id="startCameraBtn" class="btn btn-primary">Mulai Kamera</button>
+            <button id="stopCameraBtn" class="btn btn-danger">Stop</button>
+        </div>
 
-    <!-- Stream kamera -->
-    <img id="cameraStream" src="/video_stream/" width="640" height="480" alt="Stream CCTV" style="display:none;">
+        <div id="statusBar" class="status-bar">
+            <span class="status-dot"></span>
+            <span class="status-label">Idle</span>
+            <span class="status-meta" id="statusMeta">Belum ada kamera aktif</span>
+        </div>
 
-    <script>
-        // Mengaktifkan kamera dengan opsi kamera yang dipilih
-        document.getElementById('startCameraBtn').addEventListener('click', () => {
-            const cameraType = document.getElementById('cameraType').value;  // Mendapatkan nilai kamera yang dipilih
+        <div class="stream-frame" id="streamFrame">
+            <div class="stream-empty">Stream akan tampil di sini setelah kamera dinyalakan.</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-            // Mengirim request ke server dengan tipe kamera yang dipilih
-            fetch(`/start_camera/?camera_type=${cameraType}`)
-                .then(response => response.text())  // Jika respons bukan JSON
-                .then(data => {
-                    console.log(data);
-                    document.getElementById('cameraStream').style.display = 'block';  // Tampilkan stream kamera
-                })
-                .catch(error => console.error('Error:', error));
-        });
+{% block extra_scripts %}
+<script>
+    const startBtn = document.getElementById('startCameraBtn');
+    const stopBtn = document.getElementById('stopCameraBtn');
+    const cameraTypeSel = document.getElementById('cameraType');
+    const statusBar = document.getElementById('statusBar');
+    const statusLabel = statusBar.querySelector('.status-label');
+    const statusMeta = document.getElementById('statusMeta');
+    const streamFrame = document.getElementById('streamFrame');
 
-        // Menghentikan kamera
-        document.getElementById('stopCameraBtn').addEventListener('click', () => {
-            fetch('/stop_camera/')
-                .then(response => response.text())  // Jika respons bukan JSON
-                .then(data => {
-                    console.log(data);
-                    document.getElementById('cameraStream').style.display = 'none';  // Sembunyikan stream kamera
-                })
-                .catch(error => console.error('Error:', error));
-        });
-    </script>
-</body>
-</html>
+    const labelFor = (t) => t === 'internal' ? 'Kamera Internal' : (t === 'usb' ? 'Kamera USB' : t);
+
+    function setIdle(message) {
+        statusBar.classList.remove('is-live');
+        statusLabel.textContent = 'Idle';
+        statusMeta.textContent = message || 'Belum ada kamera aktif';
+        streamFrame.innerHTML = '<div class="stream-empty">Stream akan tampil di sini setelah kamera dinyalakan.</div>';
+    }
+
+    function setLive(cameraType) {
+        statusBar.classList.add('is-live');
+        statusLabel.textContent = 'Live';
+        statusMeta.textContent = 'Streaming dari ' + labelFor(cameraType);
+        const img = document.createElement('img');
+        img.alt = 'Live stream';
+        img.src = '/video_stream/?t=' + Date.now();
+        streamFrame.innerHTML = '';
+        streamFrame.appendChild(img);
+    }
+
+    startBtn.addEventListener('click', async () => {
+        const cameraType = cameraTypeSel.value;
+        startBtn.disabled = true;
+        statusMeta.textContent = 'Menyalakan ' + labelFor(cameraType) + '…';
+        try {
+            const res = await fetch('/start_camera/?camera_type=' + encodeURIComponent(cameraType));
+            const text = await res.text();
+            if (!res.ok || /Failed/i.test(text)) {
+                setIdle(text || 'Gagal menyalakan kamera');
+            } else {
+                setLive(cameraType);
+            }
+        } catch (err) {
+            setIdle('Error: ' + err.message);
+        } finally {
+            startBtn.disabled = false;
+        }
+    });
+
+    stopBtn.addEventListener('click', async () => {
+        stopBtn.disabled = true;
+        try {
+            await fetch('/stop_camera/');
+        } catch (_) {}
+        setIdle('Kamera dihentikan');
+        stopBtn.disabled = false;
+    });
+</script>
+{% endblock %}

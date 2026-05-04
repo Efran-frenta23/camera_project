@@ -16,7 +16,7 @@ def find_external_camera():
     Mencoba mendeteksi kamera eksternal dengan mengiterasi indeks kamera (1 s/d 10).
     Mengembalikan objek cv2.VideoCapture jika ditemukan, jika tidak, None.
     """
-    for idx in range(1, 11):  # Ubah rentang sesuai kebutuhan
+    for idx in range(1, 100):  # Ubah rentang sesuai kebutuhan
         cap = cv2.VideoCapture(idx)
         if cap.isOpened():
             # Opsional: bisa menambahkan pengecekan properti khusus jika diperlukan
@@ -26,7 +26,7 @@ def find_external_camera():
     return None
 
 def index(request):
-    return render(request, 'camera/index.html')
+    return render(request, 'camera/index.html', {'active_page': 'index'})
 
 def start_camera(request):
     global internal_camera, external_camera, camera
@@ -141,19 +141,15 @@ def video_stream():
             if video_writer:
                 video_writer.write(frame)
 
-            # Streaming frame sebagai JPEG
             ret_enc, buffer = cv2.imencode('.jpg', frame)
             if ret_enc:
                 frame_bytes = buffer.tobytes()
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
             else:
-                yield (b'--frame\r\n'
-                       b'Content-Type: text/plain\r\n\r\nFailed to encode frame\r\n')
+                time.sleep(0.05)
         else:
-            # Jika tidak ada frame, kirimkan pesan error melalui stream
-            yield (b'--frame\r\n'
-                   b'Content-Type: text/plain\r\n\r\nNo frames available\r\n')
+            time.sleep(0.1)
 
     # Pastikan video_writer dilepas saat keluar dari loop
     if video_writer:
@@ -164,12 +160,15 @@ def video_stream_view(request):
                                  content_type='multipart/x-mixed-replace; boundary=frame')
 
 def livestream(request):
-    return render(request, 'camera/livestream.html')
+    return render(request, 'camera/livestream.html', {'active_page': 'livestream'})
 
 def video_history(request):
-    video_files = os.listdir(settings.VIDEOS_DIR)
-    # Ubah path file video untuk diakses via URL (misal: /media/)
-    video_files = [os.path.join(settings.MEDIA_URL, 'videos', video) for video in video_files]
-    context = {'video_files': video_files}
-    print(context)
-    return render(request, 'camera/history.html', context)
+    try:
+        files = sorted(os.listdir(settings.VIDEOS_DIR), reverse=True)
+    except FileNotFoundError:
+        files = []
+    video_files = [settings.MEDIA_URL + name for name in files if name.endswith('.mp4')]
+    return render(request, 'camera/history.html', {
+        'video_files': video_files,
+        'active_page': 'history',
+    })

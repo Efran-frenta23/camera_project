@@ -1,19 +1,32 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Video History</title>
-</head>
-<body>
-    <h1>Video History</h1>
-    <ul>
-        {% for video in video_files %}
-        <li>
-            <video width="320" height="240" controls>
-                <source src="{{ video }}" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-        </li>
-        {% endfor %}
-    </ul>
-</body>
-</html>
+{% extends "camera/base.html" %}
+{% block title %}Riwayat Rekaman — Camera Project{% endblock %}
+
+{% block main %}
+<div class="card">
+    <div class="stack">
+        <div>
+            <h1>Riwayat Rekaman</h1>
+            <p class="muted">Daftar video yang sudah disimpan ke storage. Filter per tanggal/minggu/bulan akan ditambahkan setelah recorder dipindah ke pipeline ffmpeg.</p>
+        </div>
+
+        {% if video_files %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+            {% for video in video_files %}
+            <div style="border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: #fff;">
+                <video style="width: 100%; display: block; background: #0b0e12;" controls>
+                    <source src="{{ video }}" type="video/mp4">
+                    Browser tidak mendukung tag video.
+                </video>
+                <div style="padding: 10px 12px; font-size: 13px; color: var(--muted); word-break: break-all;">{{ video }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="status-bar">
+            <span class="status-dot"></span>
+            <span class="status-meta">Belum ada rekaman.</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
